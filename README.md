@@ -10,9 +10,9 @@ This class is under development. If you intend to use it in your scientific proj
 ## Features
 
 - Angular slicing of astronomical images
-- Lagrangian radii calculation for different stellar populations
+- Lagrangian radii estimate for different stellar populations
 - Inclination correction and deprojection
-- Calculation of the Size-Shape Difference (SSD)
+- Calculate the Size-Shape Difference (SSD)
 
 ## Installation
 
