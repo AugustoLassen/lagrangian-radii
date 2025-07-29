@@ -12,7 +12,7 @@ This class is under development. If you intend to use it in your scientific proj
 - Angular slicing of astronomical images
 - Lagrangian radii calculation for different stellar populations
 - Inclination correction and deprojection
-- Sum of Squared Differences (SSD) calculation
+- Calculation of the Size-Shape Difference (SSD)
 
 ## Installation
 
