@@ -1,6 +1,6 @@
 """
 Author: A. Lassen
-Last modification: July 29 2025
+Last modification: August 1 2025
 
 ------------------- Change log
 14/07/25: Fixed incorrect calculation of kpc/pixel parameters
@@ -8,13 +8,16 @@ Last modification: July 29 2025
 24/07/25: Updated methods for inclination correction
 29/07/25: Modularization of calc_lagradii() method
           Added fill_zeros() utility function for error handling for edge cases in angular bin processing
+01/08/25: Updated method to calculate SSD, now including handling of uncertainties
 """
-__version__ = "0.3"
+__version__ = "0.3.1"
 
 import numpy as np
 import pandas as pd
+import astropy.units as u
 
 from tqdm import tqdm
+from uncertainties import unumpy
 
 # ---- Cosmology parameters assumed
 from astropy.cosmology import FlatLambdaCDM
@@ -338,21 +341,41 @@ class Lag_radii():
     #     return [(xcy_icorr, ycy_icorr, rcy_icorr, rcy_phys_icorr),
     #             (xci_icorr, yci_icorr, rci_icorr, rci_phys_icorr)]
 
-    def calculate_SSD(self, lg_young, lg_int, re_arcsec):
+    def calculate_SSD(self, yslice, islice, re_arcsec, start=1, errors=False):
+        ### Attribute unit to Re
+        re_arcsec *= u.arcsec
+
         ### For normalization, we'll convert Lagrangian radii from kpc to arcsec
-        kpc_per_arcsec = cosmo.kpc_proper_per_arcmin(self.z).to("kpc/arcsec").value
+        kpc_per_arcsec = cosmo.kpc_proper_per_arcmin(self.z).to("kpc/arcsec")
 
         ### Calculate the SSD, iterating over Lagrangian radii
         ssd = []
-        for k in range(lg_young["rphys"].shape[1]):
-            # Radii at a fixed flux percentile
-            y, i = lg_young["rphys"][:, k], lg_int["rphys"][:, k]
+        if errors: ssd_err = []
+        for k in range(start, yslice["rphys"].shape[1]):
+            ### Radii at a fixed flux percentile
+            if not errors:
+                y, i = yslice["rphys"][:, k], islice["rphys"][:, k]
 
-            diff = y - i
-            ssd.append(np.sum(np.abs(diff)))
+                diff = y - i
+                ssd.append(np.sum(np.abs(diff)))
+            else:
+                y = unumpy.uarray(yslice["rphys"][:, k], yslice["rphys_err"][:, k])
+                i = unumpy.uarray(islice["rphys"][:, k], islice["rphys_err"][:, k])
 
+                diff = y - i
+                ssd.append(np.sum(np.abs(diff)).n)
+                ssd_err.append(np.sum(np.abs(diff)).std_dev)
+                
         ### Normalize the SSD by the effective radius Re
-        # SSD(kpc) --> arcsec and then divide them by Re (arcsec)
-        SSD_norm = (np.sum(ssd) / kpc_per_arcsec)/re_arcsec
+        if not errors:
+            # SSD(kpc) --> arcsec and then divide them by Re (arcsec)
+            SSD_norm = ((np.sum(ssd) * u.kpc) / kpc_per_arcsec) / re_arcsec
+            assert SSD_norm.unit == u.dimensionless_unscaled, f"After normalization, SSD should be dimensionless!"
+            
+            SSD_norm = SSD_norm.value
+            return SSD_norm
 
-        return SSD_norm
+        else:
+            SSD_norm = (np.sum(unumpy.uarray(ssd, ssd_err)) / kpc_per_arcsec.value) / re_arcsec.value
+            return SSD_norm.n, SSD_norm.std_dev
+
