@@ -17,6 +17,6 @@ This class is under development. If you intend to use it in your scientific proj
 ## Installation
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/lagrangian-analysis.git
+git clone https://github.com/AugustoLassen/lagrangian-analysis.git
 cd lagrangian-analysis
 pip install -r requirements.txt
